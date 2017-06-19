@@ -257,6 +257,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     H_ << 1, 0, 0, 0, 0,
           0, 1, 0, 0, 0;
     
+    //measurement update
     VectorXd Wpred_ = H_ * x_;
     VectorXd y = w_ - Wpred_;
     MatrixXd Ht = H_.transpose();
@@ -313,17 +314,19 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
         Zsig_(2, i) = (p_x_*cos(yaw_)+ p_y_*sin(yaw_))*v_ / rho;
     }
     
-    //Calculate Predicted Measurement Mean and Predicted Covariance
+    //Calculate Predicted Measurement Mean
     VectorXd Zpred_ = VectorXd(n_z_);
     for (int i=0; i < 2*n_aug_ + 1; i++) {
         Zpred_ = weights_(i) * Zsig_.col(i);
     }
     
+    //Measurement covariance
     MatrixXd R_ = MatrixXd(n_z_, n_z_);
     R_ << std_radr_*std_radr_, 0, 0,
           0, std_radphi_*std_radphi_, 0,
           0, 0, std_radrd_*std_radrd_;
     
+    //Calculate Predicted Measurement Covariance
     MatrixXd S_ = MatrixXd(n_z_, n_z_);
     
     S_.fill(0.0);
