@@ -12,7 +12,7 @@ using std::vector;
  */
 UKF::UKF() {
   // if this is false, laser measurements will be ignored (except during init)
-  use_laser_ = true;
+  use_laser_ = false;
 
   // if this is false, radar measurements will be ignored (except during init)
   use_radar_ = true;
@@ -24,10 +24,10 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 0.5;
+  std_a_ = 0.15;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 0.5;
+  std_yawdd_ = 0.15;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -270,6 +270,13 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     long x_size = x_.size();
     MatrixXd I = MatrixXd::Identity(x_size, x_size);
     P_ = (I - K_*H_) * P_;
+    // check if yaw is between -pi and pi
+    while (x_(3) > M_PI) {
+        x_(3) -= 2*M_PI;
+    }
+    while (x_(3) < -M_PI) {
+        x_(3) += 2*M_PI;
+    }
 }
 
 /**
@@ -300,11 +307,12 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
         double yaw_ = Xsig_pred_(3, i);
         double yaw_rate_ = Xsig_pred_(4, i);
         
-        if (fabs(p_x_) < 0.001) {
+        if (fabs(p_x_) < 0.0001) {
             p_x_ = 0.001;
         }
         
         double rho = sqrt(p_x_*p_x_ + p_y_*p_y_);
+        
         if (fabs(rho) < 0.0001) {
             rho = 0.0001;
         }
@@ -316,8 +324,10 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     
     //Calculate Predicted Measurement Mean
     VectorXd Zpred_ = VectorXd(n_z_);
+    
+    Zpred_.fill(0.0);
     for (int i=0; i < 2*n_aug_ + 1; i++) {
-        Zpred_ = weights_(i) * Zsig_.col(i);
+        Zpred_ = Zpred_ + weights_(i) * Zsig_.col(i);
     }
     
     //Measurement covariance
@@ -378,4 +388,12 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     //update state and covariance matrix
     x_ = x_ + K_*(z_ - Zpred_);
     P_ = P_ - K_*S_*K_.transpose();
+    
+    // check if yaw is between -pi and pi
+    while (x_(3) > M_PI) {
+        x_(3) -= 2*M_PI;
+    }
+    while (x_(3) < -M_PI) {
+        x_(3) += 2*M_PI;
+    }
 }
